@@ -5,11 +5,15 @@ import Appi from './Apps';
 import App from './App';
 import './styles/index.css';
 
+import { NotificationProvider } from './context/NotificationContext';
+
 const container = document.getElementById('root');
 const root = createRoot(container!);
 
 root.render(
   <React.StrictMode>
-    <Appi />
+    <NotificationProvider>
+      <App />
+    </NotificationProvider>
   </React.StrictMode>
 );

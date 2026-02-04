@@ -1,10 +1,11 @@
-/* styles/estadisticas-retiros.css */
 .estadisticas-retiros {
   background: white;
   border-radius: 12px;
   padding: 25px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
   border: 1px solid #eaeaea;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .estadisticas-header {
@@ -293,10 +294,8 @@
   width: 300px;
   height: 300px;
   border-radius: 50%;
-  background: conic-gradient(
-    #f1f5f9 0deg,
-    #f1f5f9 360deg
-  );
+  background: conic-gradient(#f1f5f9 0deg,
+      #f1f5f9 360deg);
   position: relative;
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
 }
@@ -416,5 +415,48 @@
   display: flex;
   justify-content: space-around;
   padding-top: 10px;
-  border-top: 2px solid #e2e8
+  border-top: 2px solid #e2e8f0;
+}
+
+/* Utils para Dashboard */
+.grid-2-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-top: 30px;
+}
+
+@media (max-width: 1024px) {
+  .grid-2-cols {
+    grid-template-columns: 1fr;
+  }
+}
+
+.acceso-rapido-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+@media (max-width: 768px) {
+  .estadisticas-header h2 {
+    font-size: 1.5rem;
+  }
+
+  .grafico-barras .barra-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .barra-info {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .grafico-pastel {
+    width: 250px;
+    height: 250px;
+  }
 }

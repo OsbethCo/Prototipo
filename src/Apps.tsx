@@ -12,6 +12,7 @@ import RetiroForm from './components/RetiroForm';
 import Historial from './components/Historial';
 import Pacientes from './components/Hpaciente';
 import Login from './components/Login';
+import Dashboard from './components/Dashboard';
 
 // Types
 import { Producto } from './types/Producto';
@@ -23,6 +24,7 @@ import './styles/modal.css';
 type Section =
   | 'clinica'
   | 'comercial'
+  | 'dashboard'
   | 'retirarProducto'
   | 'historial'
   | 'pacientes';
@@ -56,7 +58,7 @@ interface RegistroPaciente {
 
 const Appi: React.FC = () => {
   const [usuario, setUsuario] = useState<string | null>(null);
-  const [section, setSection] = useState<Section>('clinica');
+  const [section, setSection] = useState<Section>('dashboard');
 
   const [productosClinicos, setProductosClinicos] = useState<Producto[]>([]);
   const [productosComerciales, setProductosComerciales] = useState<Producto[]>([]);
@@ -91,21 +93,21 @@ const Appi: React.FC = () => {
 
     // Si es para un paciente, agrega al registro de pacientes
     if (data.paciente) {
-          setPacientes(prev => [
-            ...prev,
-            {
-              producto: data.nombre,
-              paciente: data.paciente,
-              medida: data.tipoPresentacion,
-              lugar: data.lugar || '',
-              serie: data.lote,
-              lista: data.lista || 'Clínica',
-              fechaRetiro: data.fechaRetiro,
-              personaRetiro: data.persona,
-              cargo: data.cargo,
-          },
-        ]);
-      }
+      setPacientes(prev => [
+        ...prev,
+        {
+          producto: data.nombre,
+          paciente: data.paciente,
+          medida: data.tipoPresentacion,
+          lugar: data.lugar || '',
+          serie: data.lote,
+          lista: data.lista || 'Clínica',
+          fechaRetiro: data.fechaRetiro,
+          personaRetiro: data.persona,
+          cargo: data.cargo,
+        },
+      ]);
+    }
 
     // Actualiza inventario clínico
     setProductosClinicos(prev =>
@@ -128,6 +130,13 @@ const Appi: React.FC = () => {
 
   const renderContent = () => {
     switch (section) {
+      case 'dashboard':
+        return (
+          <Dashboard
+            productos={[...productosClinicos, ...productosComerciales]}
+            historial={historial}
+          />
+        );
       case 'clinica':
         return (
           <ListaClinica
@@ -164,15 +173,18 @@ const Appi: React.FC = () => {
   };
 
   return (
-    <div style={{ display: 'flex' }}>
+    <div className="App">
       <SidebarUsuario
         onSelect={section => setSection(section as Section)}
         onLogout={() => setMostrarCerrarSesion(true)}
+        activeSection={section}
       />
 
-      <main style={{ flex: 1, background: '#f0f2f5', minHeight: '100vh' }}>
+      <main>
         <Header />
-        <div style={{ padding: 40 }}>{renderContent()}</div>
+        <div key={section} className="animate-fade-in">
+          {renderContent()}
+        </div>
       </main>
 
       {productoDetalle && (

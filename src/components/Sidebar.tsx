@@ -1,94 +1,165 @@
 import React, { useState } from 'react';
-import '../styles/sidebar.css'; // Importa el archivo CSS para los estilos
-import EstadisticasRetiros from './Estadisticas';
+import {
+  LayoutDashboard,
+  ClipboardList,
+  PlusCircle,
+  MinusCircle,
+  History,
+  Users,
+  BarChart3,
+  Package,
+  Stethoscope,
+  LogOut
+} from 'lucide-react';
+import '../styles/sidebar.css';
 
 interface SidebarProps {
   onSelect: (
     section:
       | 'clinica'
-      | 'comercial'
-      | 'Estadisticas'
+      | 'pacientes'
+      | 'dashboard'
+      | 'estadisticas'
       | 'agregarProducto'
       | 'registro'
       | 'historial'
-      | 'pacientes' // Cambiado de 'paciente' a 'pacientes' para consistencia
-      | 'inventario'
+      | 'gestionPacientes'
       | 'retirarProducto'
   ) => void;
-  onLogout: () => void; // Función para manejar el cierre de sesión.
+  onLogout: () => void;
+  activeSection: string;
 }
 
-/**
- * Sidebar: Menú lateral de navegación.
- * Permite seleccionar entre registro/control, inventario, historial, agregar y retirar insumos.
- * Llama a la función onSelect con la sección elegida.
- */
-
-const Sidebar: React.FC<SidebarProps> = ({ onSelect, onLogout }) => {
+const Sidebar: React.FC<SidebarProps> = ({ onSelect, onLogout, activeSection }) => {
   const [showInventarioList, setShowInventarioList] = useState(false);
   const [showRegistroList, setShowRegistroList] = useState(false);
 
-  // Muestra/oculta el submenú de registro
+  // Estado para confirmación de cierre de sesión
+  const [isConfirmingLogout, setIsConfirmingLogout] = useState(false);
+  const [confirmUser, setConfirmUser] = useState('');
+  const [confirmPass, setConfirmPass] = useState('');
+  const [logoutError, setLogoutError] = useState('');
+
   const handleRegistroClick = () => {
     setShowRegistroList((prev) => !prev);
   };
 
-  // Muestra/oculta el submenú de inventario
   const handleInventarioClick = () => {
     setShowInventarioList((prev) => !prev);
   };
 
+  const handleLogoutAttempt = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (confirmUser === 'admin' && confirmPass === '1234') {
+      onLogout();
+    } else {
+      setLogoutError('Credenciales incorrectas');
+    }
+  };
+
   return (
     <div className="sidebar">
-      {/* Botón para mostrar el submenú de registro y control */}
+      <button
+        className={`sidebar-button ${activeSection === 'dashboard' ? 'active' : ''}`}
+        onClick={() => onSelect('dashboard')}
+      >
+        <LayoutDashboard size={20} />
+        Panel Principal
+      </button>
+
       <button className="sidebar-button" onClick={handleRegistroClick}>
+        <ClipboardList size={20} />
         Registro y Control
       </button>
       {showRegistroList && (
         <div style={{ marginLeft: '1rem', marginTop: '0.3rem' }}>
-          {/* Botón para agregar insumo */}
-          <button className="sidebar-button" onClick={() => onSelect('agregarProducto')}>
+          <button
+            className={`sidebar-button ${activeSection === 'agregarProducto' ? 'active' : ''}`}
+            onClick={() => onSelect('agregarProducto')}
+          >
+            <PlusCircle size={18} />
             Agregar Insumo
           </button>
-          {/* Botón para retirar insumo (muestra el formulario de retiro) */}
-          <button className="sidebar-button" onClick={() => onSelect('retirarProducto')}>
+          <button
+            className={`sidebar-button ${activeSection === 'retirarProducto' ? 'active' : ''}`}
+            onClick={() => onSelect('retirarProducto')}
+          >
+            <MinusCircle size={18} />
             Retirar Insumo
           </button>
-          {/* Botón para ver el historial de mercancía */}
-          <button className="sidebar-button" onClick={() => onSelect('historial')}>
-            Historial de Mercancía
+          <button
+            className={`sidebar-button ${activeSection === 'historial' ? 'active' : ''}`}
+            onClick={() => onSelect('historial')}
+          >
+            <History size={18} />
+            Historial de Retiros
           </button>
-          {/* Botón para ver el historial de pacientes */}
-          <button className="sidebar-button" onClick={() => onSelect('pacientes')}>
-            Historial de Pacientes
-          </button>
-          <button className="sidebar-button" onClick={() => onSelect('estadisticas')}>
+          <button
+            className={`sidebar-button ${activeSection === 'estadisticas' ? 'active' : ''}`}
+            onClick={() => onSelect('estadisticas')}
+          >
+            <BarChart3 size={18} />
             Estadisticas
           </button>
         </div>
       )}
-      
-      {/* Botón para mostrar el submenú de inventario */}
+
       <button className="sidebar-button" onClick={handleInventarioClick}>
+        <Package size={20} />
         Inventario
       </button>
       {showInventarioList && (
         <div style={{ marginLeft: '1rem', marginTop: '0.3rem' }}>
-          {/* Botón para ver la lista clínica */}
-          <button className="sidebar-button" onClick={() => onSelect('clinica')}>
+          <button
+            className={`sidebar-button ${activeSection === 'clinica' ? 'active' : ''}`}
+            onClick={() => onSelect('clinica')}
+          >
+            <Stethoscope size={18} />
             Interno
           </button>
-          {/* Botón para ver la lista comercial */}
-          <button className="sidebar-button" onClick={() => onSelect('comercial')}>
-            Paciente
+
+          <button
+            className={`sidebar-button ${activeSection === 'gestionPacientes' ? 'active' : ''}`}
+            onClick={() => onSelect('gestionPacientes')}
+          >
+            <ClipboardList size={18} />
+            Gestión de Pacientes
           </button>
         </div>
       )}
-      
-      {/* Botón para cerrar sesión */}
-      <button className="sidebar-button" onClick={onLogout}>
-        Cerrar sesión
-      </button>
+
+      {/* Botón de Cerrar Sesión en la parte inferior */}
+      {!isConfirmingLogout ? (
+        <button className="sidebar-button logout-btn" style={{ marginTop: 'auto' }} onClick={() => setIsConfirmingLogout(true)}>
+          <LogOut size={20} />
+          Cerrar sesión
+        </button>
+      ) : (
+        <div className="logout-confirm-box" style={{ marginTop: 'auto' }}>
+          <p className="logout-confirm-title">Confirmar Salida</p>
+          <form onSubmit={handleLogoutAttempt}>
+            <input
+              type="text"
+              placeholder="Usuario"
+              value={confirmUser}
+              onChange={e => setConfirmUser(e.target.value)}
+              className="confirm-input"
+            />
+            <input
+              type="password"
+              placeholder="Contraseña"
+              value={confirmPass}
+              onChange={e => setConfirmPass(e.target.value)}
+              className="confirm-input"
+            />
+            {logoutError && <p className="confirm-error">{logoutError}</p>}
+            <div className="confirm-buttons">
+              <button type="submit" className="confirm-btn-ok">Salir</button>
+              <button type="button" className="confirm-btn-cancel" onClick={() => setIsConfirmingLogout(false)}>Cancelar</button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 };

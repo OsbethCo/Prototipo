@@ -76,110 +76,151 @@ const ProductoForm: React.FC<ProductoFormProps> = ({
     <div className="producto-form">
       <h2>Registrar Producto</h2>
 
-      <input
-        name="nombre"
-        placeholder="Nombre del producto"
-        value={producto.nombre}
-        onChange={handleChange}
-      />
+      <div className="form-grid">
+        <div className="input-group">
+          <label>Nombre del producto</label>
+          <input
+            name="nombre"
+            placeholder="Ej: Paracetamol"
+            value={producto.nombre}
+            onChange={handleChange}
+          />
+        </div>
 
-      <input
-        name="medida"
-        placeholder="Medida / Presentación"
-        value={producto.medida}
-        onChange={handleChange}
-      />
+        <div className="input-group">
+          <label>Medida / Presentación</label>
+          <input
+            name="medida"
+            placeholder="Ej: 500mg / Tableta"
+            value={producto.medida}
+            onChange={handleChange}
+          />
+        </div>
 
-      <input
-        name="lote"
-        placeholder="Lote"
-        value={producto.lote}
-        onChange={handleChange}
-      />
+        <div className="input-group">
+          <label>Lote</label>
+          <input
+            name="lote"
+            placeholder="Introduce el lote"
+            value={producto.lote}
+            onChange={handleChange}
+          />
+        </div>
 
-      <input
-        type="number"
-        name="cantidad"
-        placeholder="Cantidad"
-        value={producto.cantidad}
-        onChange={handleChange}
-      />
+        <div className="input-group">
+          <label>Cantidad</label>
+          <input
+            type="number"
+            name="cantidad"
+            placeholder="Cantidad inicial"
+            value={producto.cantidad}
+            onChange={handleChange}
+          />
+        </div>
 
-      <input
-        type="number"
-        name="stock"
-        placeholder="Stock mínimo"
-        value={producto.stock}
-        onChange={handleChange}
-      />
+        <div className="input-group">
+          <label>Stock mínimo</label>
+          <input
+            type="number"
+            name="stock"
+            placeholder="Alerta de stock"
+            value={producto.stock}
+            onChange={handleChange}
+          />
+        </div>
 
-      <input
-        type="date"
-        name="fechaVencimiento"
-        value={producto.fechaVencimiento}
-        onChange={handleChange}
-      />
+        <div className="input-group">
+          <label>Fecha de vencimiento</label>
+          <input
+            type="date"
+            name="fechaVencimiento"
+            value={producto.fechaVencimiento}
+            onChange={handleChange}
+          />
+        </div>
 
-      <select
-        name="categoria"
-        value={producto.categoria}
-        onChange={handleChange}
-      >
-        <option value="Medicamento">Medicamento</option>
-        <option value="Insumo">Insumo</option>
-        <option value="Equipo">Equipo</option>
-      </select>
+        <div className="input-group">
+          <label>Categoría</label>
+          <select
+            name="categoria"
+            value={producto.categoria}
+            onChange={handleChange}
+          >
+            <option value="Medicamento">Medicamento</option>
+            <option value="Insumo">Insumo</option>
+            <option value="Equipo">Equipo</option>
+          </select>
+        </div>
 
-      <input
-        name="tipoPresentacion"
-        placeholder="Tipo de presentación"
-        value={producto.tipoPresentacion}
-        onChange={handleChange}
-      />
+        <div className="input-group">
+          <label>Tipo de presentación</label>
+          <input
+            name="tipoPresentacion"
+            placeholder="Ej: Frasco, Blíster"
+            value={producto.tipoPresentacion}
+            onChange={handleChange}
+          />
+        </div>
 
-      <input
-        name="unidadMedida"
-        placeholder="Unidad de medida"
-        value={producto.unidadMedida}
-        onChange={handleChange}
-      />
+        <div className="input-group">
+          <label>Unidad de medida</label>
+          <input
+            name="unidadMedida"
+            placeholder="Ej: ml, mg, ud"
+            value={producto.unidadMedida}
+            onChange={handleChange}
+          />
+        </div>
 
-      <input
-        name="ubicacion"
-        placeholder="Ubicación"
-        value={producto.ubicacion}
-        onChange={handleChange}
-      />
+        <div className="input-group">
+          <label>Ubicación</label>
+          <input
+            name="ubicacion"
+            placeholder="Ej: Estante A1"
+            value={producto.ubicacion}
+            onChange={handleChange}
+          />
+        </div>
 
-      <input
-        name="proveedor"
-        placeholder="Proveedor"
-        value={producto.proveedor}
-        onChange={handleChange}
-      />
+        <div className="input-group">
+          <label>Proveedor</label>
+          <input
+            name="proveedor"
+            placeholder="Nombre del proveedor"
+            value={producto.proveedor}
+            onChange={handleChange}
+          />
+        </div>
 
-      <input
-        name="condicionesAlmacenamiento"
-        placeholder="Condiciones de almacenamiento"
-        value={producto.condicionesAlmacenamiento}
-        onChange={handleChange}
-      />
+        <div className="input-group">
+          <label>Condiciones de almacenamiento</label>
+          <input
+            name="condicionesAlmacenamiento"
+            placeholder="Ej: Refrigerado, Seco"
+            value={producto.condicionesAlmacenamiento}
+            onChange={handleChange}
+          />
+        </div>
 
-      <input
-        name="codigo"
-        placeholder="Código interno"
-        value={producto.codigo}
-        onChange={handleChange}
-      />
+        <div className="input-group">
+          <label>Código interno</label>
+          <input
+            name="codigo"
+            placeholder="Código de barras o ID"
+            value={producto.codigo}
+            onChange={handleChange}
+          />
+        </div>
 
-      <div style={{ marginTop: '1rem', display: 'flex', gap: '12px' }}>
-        <button onClick={() => handleSubmit('clinico')}>
-          Agregar Clínico
-        </button>
+        <div className="button-group">
+          <button onClick={() => handleSubmit('clinico')}>
+            Agregar Clínico
+          </button>
 
-        <button onClick={() => handleSubmit('comercial')}>
-          Agregar Comercial
-        </button>
+          <button onClick={() => handleSubmit('comercial')}>
+            Agregar Comercial
+          </button>
+        </div>
       </div>
     </div>
   );

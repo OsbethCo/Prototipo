@@ -1,7 +1,7 @@
 // components/EstadisticasRetiros.tsx
 import React, { useState, useMemo } from 'react';
 import { Producto } from '../types/Producto';
-import '../styles/estadisticas-retiros.css';
+import '../styles/estadisticas.css';
 
 // Definir la interfaz de retiros basada en tu formulario
 interface RetiroData {
@@ -10,6 +10,7 @@ interface RetiroData {
   lote: string;
   cantidad: number;
   fechaRetiro: string;
+  categoria?: 'Interno' | 'Paciente';
   paciente?: string;
   destino?: string;
   persona: {
@@ -27,10 +28,10 @@ interface EstadisticasRetirosProps {
 type TipoGrafico = 'barras' | 'pastel' | 'lineas';
 type FiltroCargo = 'todos' | 'Enfermera' | 'Médico' | 'Técnico' | 'Administrativo' | 'Farmacéutico';
 
-const EstadisticasRetiros: React.FC<EstadisticasRetirosProps> = ({ 
-  productos, 
-  retiros, 
-  periodo = 'mes' 
+const EstadisticasRetiros: React.FC<EstadisticasRetirosProps> = ({
+  productos,
+  retiros,
+  periodo = 'mes'
 }) => {
   const [tipoGrafico, setTipoGrafico] = useState<TipoGrafico>('barras');
   const [filtroCargo, setFiltroCargo] = useState<FiltroCargo>('todos');
@@ -49,13 +50,13 @@ const EstadisticasRetiros: React.FC<EstadisticasRetirosProps> = ({
       const inicio = new Date(fechaInicio);
       const fin = new Date(fechaFin);
       fin.setHours(23, 59, 59, 999);
-      
+
       // Filtrar por fecha
       if (fechaRetiro < inicio || fechaRetiro > fin) return false;
-      
+
       // Filtrar por cargo
       if (filtroCargo !== 'todos' && retiro.persona.cargo !== filtroCargo) return false;
-      
+
       return true;
     });
   }, [retiros, fechaInicio, fechaFin, filtroCargo]);
@@ -82,7 +83,7 @@ const EstadisticasRetiros: React.FC<EstadisticasRetirosProps> = ({
           cargos: new Set(),
         };
       }
-      
+
       const producto = acumulador[retiro.nombre];
       producto.cantidadTotal += retiro.cantidad;
       producto.vecesRetirado += 1;
@@ -111,25 +112,25 @@ const EstadisticasRetiros: React.FC<EstadisticasRetirosProps> = ({
     const totalRetiros = retirosFiltrados.length;
     const totalUnidadesRetiradas = retirosFiltrados.reduce((sum, r) => sum + r.cantidad, 0);
     const promedioPorRetiro = totalRetiros > 0 ? totalUnidadesRetiradas / totalRetiros : 0;
-    
+
     // Días con retiros
-    const diasConRetiros = new Set(retirosFiltrados.map(r => 
+    const diasConRetiros = new Set(retirosFiltrados.map(r =>
       new Date(r.fechaRetiro).toDateString()
     )).size;
-    
+
     // Producto más retirado
     const productoTop = productosMasRetirados[0];
-    
+
     // Horas pico
     const horasRetiros = retirosFiltrados.map(r => {
       const fecha = new Date(r.fechaRetiro);
       return fecha.getHours();
     });
-    
-    const horaPico = horasRetiros.length > 0 
-      ? horasRetiros.reduce((a, b) => 
-          horasRetiros.filter(v => v === a).length >= horasRetiros.filter(v => v === b).length ? a : b
-        )
+
+    const horaPico = horasRetiros.length > 0
+      ? horasRetiros.reduce((a, b) =>
+        horasRetiros.filter(v => v === a).length >= horasRetiros.filter(v => v === b).length ? a : b
+      )
       : null;
 
     return {
@@ -144,15 +145,21 @@ const EstadisticasRetiros: React.FC<EstadisticasRetirosProps> = ({
 
   // Datos para gráficos
   const datosGrafico = useMemo(() => {
+    // Para el gráfico de pastel, calculamos los porcentajes
     if (tipoGrafico === 'pastel') {
       return productosMasRetirados.map(p => ({
         nombre: p.nombre,
         valor: p.cantidadTotal,
-        porcentaje: (p.cantidadTotal / estadisticasGenerales.totalUnidadesRetiradas) * 100
+        porcentaje: (p.cantidadTotal / (estadisticasGenerales.totalUnidadesRetiradas || 1)) * 100
       }));
     }
-    
-    return productosMasRetirados;
+
+    // Para otros gráficos, devolvemos una estructura simplificada pero consistente
+    return productosMasRetirados.map(p => ({
+      nombre: p.nombre,
+      valor: p.cantidadTotal,
+      porcentaje: (p.cantidadTotal / (estadisticasGenerales.totalUnidadesRetiradas || 1)) * 100
+    }));
   }, [productosMasRetirados, tipoGrafico, estadisticasGenerales.totalUnidadesRetiradas]);
 
   // Colores para gráficos
@@ -165,7 +172,7 @@ const EstadisticasRetiros: React.FC<EstadisticasRetirosProps> = ({
   // Renderizar gráfico de barras
   const renderGraficoBarras = () => {
     const maxCantidad = Math.max(...productosMasRetirados.map(p => p.cantidadTotal));
-    
+
     return (
       <div className="grafico-barras">
         {productosMasRetirados.map((producto, index) => (
@@ -177,7 +184,7 @@ const EstadisticasRetiros: React.FC<EstadisticasRetirosProps> = ({
               </span>
             </div>
             <div className="barra-container">
-              <div 
+              <div
                 className="barra"
                 style={{
                   width: `${(producto.cantidadTotal / maxCantidad) * 100}%`,
@@ -196,7 +203,7 @@ const EstadisticasRetiros: React.FC<EstadisticasRetirosProps> = ({
   // Renderizar gráfico de pastel (simulado con CSS)
   const renderGraficoPastel = () => {
     let acumuladoAngulo = 0;
-    
+
     return (
       <div className="grafico-pastel-container">
         <div className="grafico-pastel">
@@ -205,7 +212,7 @@ const EstadisticasRetiros: React.FC<EstadisticasRetirosProps> = ({
             const angulo = (porcentaje / 100) * 360;
             const startAngle = acumuladoAngulo;
             acumuladoAngulo += angulo;
-            
+
             return (
               <div
                 key={dato.nombre}
@@ -223,8 +230,8 @@ const EstadisticasRetiros: React.FC<EstadisticasRetirosProps> = ({
         <div className="leyenda-pastel">
           {datosGrafico.map((dato, index) => (
             <div key={dato.nombre} className="item-leyenda">
-              <span 
-                className="color-leyenda" 
+              <span
+                className="color-leyenda"
                 style={{ backgroundColor: colores[index % colores.length] }}
               />
               <span className="nombre-leyenda">{dato.nombre}</span>
@@ -242,7 +249,7 @@ const EstadisticasRetiros: React.FC<EstadisticasRetirosProps> = ({
   const renderGraficoLineas = () => {
     // Agrupar por día
     const retirosPorDia: Record<string, number> = {};
-    
+
     retirosFiltrados.forEach(retiro => {
       const fecha = new Date(retiro.fechaRetiro).toLocaleDateString('es-ES');
       if (!retirosPorDia[fecha]) {
@@ -267,7 +274,7 @@ const EstadisticasRetiros: React.FC<EstadisticasRetirosProps> = ({
         <div className="contenido-lineas">
           {valores.map((valor, index) => (
             <div key={index} className="punto-linea">
-              <div 
+              <div
                 className="punto"
                 style={{
                   bottom: `${(valor / maxValor) * 100}%`,
@@ -276,7 +283,7 @@ const EstadisticasRetiros: React.FC<EstadisticasRetirosProps> = ({
                 title={`${fechas[index]}: ${valor} unidades`}
               />
               {index < valores.length - 1 && (
-                <div 
+                <div
                   className="linea"
                   style={{
                     height: `${Math.abs((valores[index + 1] - valor) / maxValor) * 50}%`,
@@ -581,34 +588,34 @@ const EstadisticasRetiros: React.FC<EstadisticasRetirosProps> = ({
             <div className="insight-content">
               <h4>Gestión de Stock</h4>
               <p>
-                El {estadisticasGenerales.productoTop ? 
-                `"${estadisticasGenerales.productoTop.nombre}"` : 'producto principal'} 
-                representa el {estadisticasGenerales.productoTop ? 
-                ((estadisticasGenerales.productoTop.cantidadTotal / estadisticasGenerales.totalUnidadesRetiradas) * 100).toFixed(1) : '0'}% 
+                El {estadisticasGenerales.productoTop ?
+                  `"${estadisticasGenerales.productoTop.nombre}"` : 'producto principal'}
+                representa el {estadisticasGenerales.productoTop ?
+                  ((estadisticasGenerales.productoTop.cantidadTotal / estadisticasGenerales.totalUnidadesRetiradas) * 100).toFixed(1) : '0'}%
                 de los retiros totales.
               </p>
             </div>
           </div>
-          
+
           <div className="insight-card">
             <div className="insight-icon">⏰</div>
             <div className="insight-content">
               <h4>Horario de Mayor Demanda</h4>
               <p>
-                La mayoría de los retiros ocurren {estadisticasGenerales.horaPico !== null ? 
-                `entre las ${estadisticasGenerales.horaPico}:00 y ${estadisticasGenerales.horaPico + 1}:00 horas` : 
-                'en diferentes horarios'}.
+                La mayoría de los retiros ocurren {estadisticasGenerales.horaPico !== null ?
+                  `entre las ${estadisticasGenerales.horaPico}:00 y ${estadisticasGenerales.horaPico + 1}:00 horas` :
+                  'en diferentes horarios'}.
               </p>
             </div>
           </div>
-          
+
           <div className="insight-card">
             <div className="insight-icon">👥</div>
             <div className="insight-content">
               <h4>Perfil de Usuarios</h4>
               <p>
-                {estadisticasGenerales.productoTop ? 
-                `${estadisticasGenerales.productoTop.cargos.join(', ')}` : 'Diferentes cargos'} 
+                {estadisticasGenerales.productoTop ?
+                  `${estadisticasGenerales.productoTop.cargos.join(', ')}` : 'Diferentes cargos'}
                 son los principales responsables de los retiros.
               </p>
             </div>

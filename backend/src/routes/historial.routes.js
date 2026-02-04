@@ -34,7 +34,7 @@ router.get('/paciente/:id', authMiddleware, (req, res) => {
 
   db.all(sql, [id], (err, rows) => {
     if (err) {
-      return res.status(500).json({ message: 'Error al obtener historial del paciente' });
+      return res.status(500).json({ message: 'Error en el historial del paciente' });
     }
     res.json(rows);
   });

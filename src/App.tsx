@@ -6,14 +6,14 @@ import Header from './components/Header';
 
 // Views
 import ListaClinica from './components/listaclinica';
-import ListaComercial from './components/listacomercial';
 import ProductoForm from './components/ProductoForm';
 import ProductoDetalle from './components/ProductoDetalle';
 import Historial from './components/Historial';
-import RegistroPacientes from './components/Hpaciente';
 import Login from './components/Login';
 import RetiroForm from './components/RetiroForm';
-import Estadisticas from './components/Estadisticas'
+import Estadisticas from './components/Estadisticas';
+import Dashboard from './components/Dashboard';
+import GestionPacientes from './components/GestionPacientes';
 
 // Types
 import { Producto } from './types/Producto';
@@ -24,11 +24,13 @@ import './styles/modal.css';
 
 type Section =
   | 'clinica'
-  | 'comercial'
+  | 'pacientes'
+  | 'gestionPacientes'
+  | 'dashboard'
+  | 'estadisticas'
   | 'agregarProducto'
   | 'historial'
-  | 'retirarProducto'
-  | 'pacientes';
+  | 'retirarProducto';
 
 type ProductoSinId = Omit<Producto, 'id'>;
 
@@ -40,6 +42,7 @@ export interface RetiroData {
   tipoPresentacion: string;
   lote: string;
   cantidad: number;
+  unidadMedida?: string;
   fechaRetiro: string;
   paciente?: string;
   destino?: string;
@@ -52,9 +55,12 @@ export interface RetiroData {
 interface HistorialItem {
   nombre: string;
   medida: string;
+  unidadMedida?: string;
   lista: string;
   cantidad: number;
+  destino?: string;
   fechaRetiro: string;
+  categoria: 'Interno' | 'Paciente';
   persona: {
     nombre: string;
     apellido: string;
@@ -66,6 +72,7 @@ interface RegistroPaciente {
   producto: string;
   paciente: string;
   medida: string;
+  unidadMedida?: string;
   lugar: string;
   serie: string;
   lista: string;
@@ -76,7 +83,7 @@ interface RegistroPaciente {
 
 const App: React.FC = () => {
   const [usuario, setUsuario] = useState<string | null>(null);
-  const [section, setSection] = useState<Section>('clinica');
+  const [section, setSection] = useState<Section>('dashboard');
 
   const [productosClinicos, setProductosClinicos] = useState<Producto[]>([]);
   const [productosComerciales, setProductosComerciales] = useState<Producto[]>([]);
@@ -115,9 +122,12 @@ const App: React.FC = () => {
       {
         nombre: data.nombre,
         medida: data.tipoPresentacion,
+        unidadMedida: data.unidadMedida,
         lista: data.lote,
         cantidad: data.cantidad,
+        destino: data.destino,
         fechaRetiro: data.fechaRetiro,
+        categoria: (typeof data.paciente === 'string' && data.paciente.trim() !== '') ? 'Paciente' : 'Interno',
         persona: {
           nombre: data.persona.nombre,
           apellido: '',
@@ -126,22 +136,23 @@ const App: React.FC = () => {
       },
     ]);
 
-          if (typeof data.paciente === 'string' && data.paciente.trim() !== '') {
-        setPacientesRegistrados(prev => [
-          ...prev,
-          {
-            producto: data.nombre,
-            paciente: data.paciente as string, // 👈 FIX
-            medida: data.tipoPresentacion,
-            lugar: data.destino ?? 'No especificado',
-            serie: data.lote,
-            lista: data.lote,
-            fechaRetiro: data.fechaRetiro,
-            personaRetiro: data.persona.nombre,
-            cargo: data.persona.cargo,
-          },
-        ]);
-      }
+    if (typeof data.paciente === 'string' && data.paciente.trim() !== '') {
+      setPacientesRegistrados(prev => [
+        ...prev,
+        {
+          producto: data.nombre,
+          paciente: data.paciente as string,
+          medida: data.tipoPresentacion,
+          unidadMedida: data.unidadMedida,
+          lugar: data.destino ?? 'No especificado',
+          serie: data.lote,
+          lista: data.lote,
+          fechaRetiro: data.fechaRetiro,
+          personaRetiro: data.persona.nombre,
+          cargo: data.persona.cargo,
+        },
+      ]);
+    }
 
     const actualizar = (lista: Producto[]) =>
       lista.map(p =>
@@ -169,10 +180,41 @@ const App: React.FC = () => {
   // --------------------
   const renderContent = () => {
     switch (section) {
+      case 'dashboard':
+        return (
+          <Dashboard
+            productos={[...productosClinicos, ...productosComerciales]}
+            historial={historial}
+          />
+        );
       case 'clinica':
         return <ListaClinica productos={productosClinicos} onVerDetalle={setProductoDetalle} />;
-      case 'comercial':
-        return <ListaComercial productos={productosComerciales} onVerDetalle={setProductoDetalle} />;
+      case 'pacientes':
+        return (
+          <GestionPacientes
+            key="inv-view"
+            initialTab="inventario"
+            productos={productosComerciales}
+            pacientes={pacientesRegistrados}
+            onVerDetalle={setProductoDetalle}
+            onEliminarProducto={(idx) => {
+              setProductosComerciales(prev => prev.filter((_, i) => i !== idx));
+            }}
+          />
+        );
+      case 'gestionPacientes':
+        return (
+          <GestionPacientes
+            key="hist-view"
+            initialTab="historial"
+            productos={productosComerciales}
+            pacientes={pacientesRegistrados}
+            onVerDetalle={setProductoDetalle}
+            onEliminarProducto={(idx) => {
+              setProductosComerciales(prev => prev.filter((_, i) => i !== idx));
+            }}
+          />
+        );
       case 'agregarProducto':
         return (
           <ProductoForm
@@ -189,19 +231,37 @@ const App: React.FC = () => {
         );
       case 'historial':
         return <Historial historial={historial} />;
-      case 'pacientes':
-        return <RegistroPacientes pacientes={pacientesRegistrados} />;
+      case 'estadisticas':
+        return (
+          <Estadisticas
+            productos={[...productosClinicos, ...productosComerciales]}
+            retiros={historial.map(h => ({
+              nombre: h.nombre,
+              tipoPresentacion: h.medida,
+              lote: h.lista,
+              cantidad: h.cantidad,
+              fechaRetiro: h.fechaRetiro,
+              persona: {
+                nombre: h.persona.nombre,
+                cargo: h.persona.cargo
+              },
+              categoria: h.categoria
+            }))}
+          />
+        );
       default:
         return null;
     }
   };
 
   return (
-    <div style={{ display: 'flex' }}>
-      <Sidebar onSelect={handleSelectSection} onLogout={() => setUsuario(null)} />
-      <main style={{ flex: 1 }}>
+    <div className="App">
+      <Sidebar onSelect={handleSelectSection} onLogout={() => setUsuario(null)} activeSection={section} />
+      <main>
         <Header />
-        <div style={{ padding: 40 }}>{renderContent()}</div>
+        <div key={section} className="animate-fade-in">
+          {renderContent()}
+        </div>
       </main>
 
       {productoDetalle && (

@@ -1,7 +1,7 @@
 .productos-list {
-    padding: 2.8rem;
-    height: calc(100vh - 14.5rem);
-
+    padding: 0;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .productos-title {
@@ -92,6 +92,7 @@
     background-color: #ccc;
     color: #000;
 }
-.productos-list .mensaje-vacio{
+
+.productos-list .mensaje-vacio {
     text-align: center;
 }

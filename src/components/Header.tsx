@@ -8,7 +8,7 @@ const Header: React.FC = () => (
     <div className="header-user">
       <img
         src={logo}
-        alt="Hospital logo displayed to the Sistema Hospitalario,"
+        alt="Hospital logo displayed to the Sistema Hospitalaria,"
         className="user-avatar"
       />
     </div>

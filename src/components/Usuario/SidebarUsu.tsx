@@ -8,12 +8,14 @@ interface SidebarProps {
       | 'comercial'
       | 'agregarProducto'
       | 'registro'
+      | 'dashboard'
       | 'historial'
       | 'pacientes' // Cambiado de 'paciente' a 'pacientes' para consistencia
       | 'inventario'
       | 'retirarProducto'
   ) => void;
-  onLogout: () => void; // Función para manejar el cierre de sesión.
+  onLogout: () => void;
+  activeSection: string;
 }
 
 /**
@@ -22,7 +24,7 @@ interface SidebarProps {
  * Llama a la función onSelect con la sección elegida.
  */
 
-const SidebarUsuario: React.FC<SidebarProps> = ({ onSelect, onLogout }) => {
+const SidebarUsuario: React.FC<SidebarProps> = ({ onSelect, onLogout, activeSection }) => {
   const [showInventarioList, setShowInventarioList] = useState(false);
   const [showRegistroList, setShowRegistroList] = useState(false);
 
@@ -38,6 +40,14 @@ const SidebarUsuario: React.FC<SidebarProps> = ({ onSelect, onLogout }) => {
 
   return (
     <div className="sidebar">
+      {/* Botón de Dashboard */}
+      <button
+        className={`sidebar-button ${activeSection === 'dashboard' ? 'active' : ''}`}
+        onClick={() => onSelect('dashboard')}
+      >
+        🏠 Panel Principal
+      </button>
+
       {/* Botón para mostrar el submenú de registro y control */}
       <button className="sidebar-button" onClick={handleRegistroClick}>
         Registro y Control
@@ -45,20 +55,29 @@ const SidebarUsuario: React.FC<SidebarProps> = ({ onSelect, onLogout }) => {
       {showRegistroList && (
         <div style={{ marginLeft: '1rem', marginTop: '0.3rem' }}>
           {/* Botón para retirar insumo (muestra el formulario de retiro) */}
-          <button className="sidebar-button" onClick={() => onSelect('retirarProducto')}>
+          <button
+            className={`sidebar-button ${activeSection === 'retirarProducto' ? 'active' : ''}`}
+            onClick={() => onSelect('retirarProducto')}
+          >
             Retirar Insumo
           </button>
           {/* Botón para ver el historial de mercancía */}
-          <button className="sidebar-button" onClick={() => onSelect('historial')}>
+          <button
+            className={`sidebar-button ${activeSection === 'historial' ? 'active' : ''}`}
+            onClick={() => onSelect('historial')}
+          >
             Historial de Mercancía
           </button>
           {/* Botón para ver el historial de pacientes */}
-          <button className="sidebar-button" onClick={() => onSelect('pacientes')}>
+          <button
+            className={`sidebar-button ${activeSection === 'pacientes' ? 'active' : ''}`}
+            onClick={() => onSelect('pacientes')}
+          >
             Historial de Pacientes
           </button>
         </div>
       )}
-      
+
       {/* Botón para mostrar el submenú de inventario */}
       <button className="sidebar-button" onClick={handleInventarioClick}>
         Inventario
@@ -66,16 +85,22 @@ const SidebarUsuario: React.FC<SidebarProps> = ({ onSelect, onLogout }) => {
       {showInventarioList && (
         <div style={{ marginLeft: '1rem', marginTop: '0.3rem' }}>
           {/* Botón para ver la lista clínica */}
-          <button className="sidebar-button" onClick={() => onSelect('clinica')}>
+          <button
+            className={`sidebar-button ${activeSection === 'clinica' ? 'active' : ''}`}
+            onClick={() => onSelect('clinica')}
+          >
             Interno
           </button>
           {/* Botón para ver la lista comercial */}
-          <button className="sidebar-button" onClick={() => onSelect('comercial')}>
+          <button
+            className={`sidebar-button ${activeSection === 'comercial' ? 'active' : ''}`}
+            onClick={() => onSelect('comercial')}
+          >
             Paciente
           </button>
         </div>
       )}
-      
+
       {/* Botón para cerrar sesión */}
       <button className="sidebar-button" onClick={onLogout}>
         Cerrar sesión
