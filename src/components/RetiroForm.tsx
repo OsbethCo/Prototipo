@@ -8,6 +8,7 @@ interface RetiroData {
   tipoPresentacion: string;
   lote: string;
   cantidad: number;
+  unidadMedida?: string;
   fechaRetiro: string;
   paciente?: string;
   destino?: string;
@@ -28,6 +29,7 @@ const RetiroForm: React.FC<RetiroFormProps> = ({ productos, onRetiro }) => {
     tipoPresentacion: "",
     lote: "",
     cantidad: 1,
+    unidadMedida: "",
     fechaRetiro: new Date().toISOString().split("T")[0],
     paciente: "",
     destino: "",
@@ -51,12 +53,12 @@ const RetiroForm: React.FC<RetiroFormProps> = ({ productos, onRetiro }) => {
   const handleProductoChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const nombreSeleccionado = e.target.value;
     const productosFiltrados = productos.filter(p => p.nombre === nombreSeleccionado && p.cantidad > 0);
-    
+
     // Obtener presentaciones únicas
     const presentaciones = Array.from(
       new Set(productosFiltrados.map(p => p.medida))
     ).filter(Boolean);
-    
+
     // Obtener lotes únicos
     const lotes = Array.from(
       new Set(productosFiltrados.map(p => p.lote))
@@ -78,11 +80,11 @@ const RetiroForm: React.FC<RetiroFormProps> = ({ productos, onRetiro }) => {
   const handlePresentacionChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const presentacion = e.target.value;
     const productosFiltrados = productos.filter(
-      p => p.nombre === form.nombre && 
-           p.medida === presentacion && 
-           p.cantidad > 0
+      p => p.nombre === form.nombre &&
+        p.medida === presentacion &&
+        p.cantidad > 0
     );
-    
+
     const lotes = Array.from(
       new Set(productosFiltrados.map(p => p.lote))
     ).filter(Boolean);
@@ -111,7 +113,7 @@ const RetiroForm: React.FC<RetiroFormProps> = ({ productos, onRetiro }) => {
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
-    
+
     if (name === "personaNombre") {
       setForm({
         ...form,
@@ -123,18 +125,34 @@ const RetiroForm: React.FC<RetiroFormProps> = ({ productos, onRetiro }) => {
         persona: { ...form.persona, cargo: value }
       });
     } else {
-      setForm({
-        ...form, 
-        [name]: name === "cantidad" ? (parseInt(value) || 1) : value
-      });
+      let newValue: string | number = value;
+      if (name === "cantidad") {
+        newValue = parseInt(value) || 1;
+      }
+
+      const updatedForm = { ...form, [name]: newValue };
+
+      // Si el cargo es "Paciente" y el nombre de la persona está escrito, sincronizar con paciente
+      if (name === "personaNombre" && form.persona.cargo === "Paciente") {
+        updatedForm.paciente = value;
+      }
+
+      setForm(updatedForm);
     }
   };
 
+  // Efecto para sincronizar cuando cambia el cargo a Paciente
+  useEffect(() => {
+    if (form.persona.cargo === "Paciente" && form.persona.nombre) {
+      setForm(prev => ({ ...prev, paciente: prev.persona.nombre }));
+    }
+  }, [form.persona.cargo]);
+
   // Obtener producto seleccionado para validar cantidad máxima
   const productoSeleccionado = productos.find(
-    p => p.nombre === form.nombre && 
-         p.medida === form.tipoPresentacion && 
-         p.lote === form.lote
+    p => p.nombre === form.nombre &&
+      p.medida === form.tipoPresentacion &&
+      p.lote === form.lote
   );
 
   // Cantidad máxima disponible
@@ -143,7 +161,7 @@ const RetiroForm: React.FC<RetiroFormProps> = ({ productos, onRetiro }) => {
   // Manejar envío del formulario
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validaciones
     if (!form.nombre || !form.persona.nombre || !form.persona.cargo || !form.fechaRetiro) {
       alert("❌ Por favor complete todos los campos obligatorios (*)");
@@ -166,6 +184,7 @@ const RetiroForm: React.FC<RetiroFormProps> = ({ productos, onRetiro }) => {
       tipoPresentacion: form.tipoPresentacion,
       lote: form.lote,
       cantidad: form.cantidad,
+      unidadMedida: form.unidadMedida,
       fechaRetiro: form.fechaRetiro,
       paciente: form.paciente.trim() || undefined,
       destino: form.destino.trim() || undefined,
@@ -184,6 +203,7 @@ const RetiroForm: React.FC<RetiroFormProps> = ({ productos, onRetiro }) => {
       tipoPresentacion: "",
       lote: "",
       cantidad: 1,
+      unidadMedida: "",
       fechaRetiro: new Date().toISOString().split("T")[0],
       paciente: "",
       destino: "",
@@ -202,11 +222,11 @@ const RetiroForm: React.FC<RetiroFormProps> = ({ productos, onRetiro }) => {
     <div className="retiro-form-container">
       <form onSubmit={handleSubmit} className="producto-form">
         <h2 className="form-title">📋 Formulario de Retiro de Productos</h2>
-        
+
         {/* Información del Producto */}
         <div className="form-section">
           <h3 className="section-title">📦 Información del Producto</h3>
-          
+
           {/* Producto */}
           <div className="form-group">
             <label><strong>Producto *</strong></label>
@@ -268,27 +288,48 @@ const RetiroForm: React.FC<RetiroFormProps> = ({ productos, onRetiro }) => {
             </div>
           )}
 
-          {/* Cantidad */}
-          <div className="form-group">
-            <label>
-              <strong>Cantidad a Retirar *</strong>
-              {productoSeleccionado && (
-                <span style={{ fontSize: "0.9em", color: "#666", marginLeft: "8px" }}>
-                  (Disponible: {cantidadMaxima})
-                </span>
-              )}
-            </label>
-            <input
-              type="number"
-              name="cantidad"
-              min="1"
-              max={cantidadMaxima}
-              value={form.cantidad}
-              onChange={handleChange}
-              required
-              disabled={!form.nombre || !form.tipoPresentacion || !form.lote}
-              className="form-input"
-            />
+          {/* Cantidad y Unidad */}
+          <div className="form-group-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+            <div className="form-group">
+              <label>
+                <strong>Cantidad *</strong>
+                {productoSeleccionado && (
+                  <span style={{ fontSize: "0.8em", color: "#666", marginLeft: "4px" }}>
+                    (Stock: {cantidadMaxima})
+                  </span>
+                )}
+              </label>
+              <input
+                type="number"
+                name="cantidad"
+                min="1"
+                max={cantidadMaxima}
+                value={form.cantidad}
+                onChange={handleChange}
+                required
+                disabled={!form.nombre || !form.tipoPresentacion || !form.lote}
+                className="form-input"
+              />
+            </div>
+
+            <div className="form-group">
+              <label><strong>Unidad (Opcional)</strong></label>
+              <select
+                name="unidadMedida"
+                value={form.unidadMedida}
+                onChange={handleChange}
+                className="form-input"
+                disabled={!form.nombre}
+              >
+                <option value="">Seleccione unidad</option>
+                <option value="mg">Miligramos (mg)</option>
+                <option value="g">Gramos (g)</option>
+                <option value="ml">Mililitros (ml)</option>
+                <option value="unid">Unidades</option>
+                <option value="comp">Comprimidos</option>
+                <option value="amp">Ampollas</option>
+              </select>
+            </div>
           </div>
 
           {/* Fecha de Retiro */}
@@ -308,7 +349,7 @@ const RetiroForm: React.FC<RetiroFormProps> = ({ productos, onRetiro }) => {
         {/* Información del Destino */}
         <div className="form-section">
           <h3 className="section-title">📍 Información del Destino</h3>
-          
+
           {/* Lugar de Destino */}
           <div className="form-group">
             <label><strong>Lugar de Destino</strong></label>
@@ -325,6 +366,7 @@ const RetiroForm: React.FC<RetiroFormProps> = ({ productos, onRetiro }) => {
               <option value="Hospitalización">Hospitalización</option>
               <option value="Consulta Externa">Consulta Externa</option>
               <option value="Farmacia">Farmacia</option>
+              <option value="Paciente">Paciente</option>
               <option value="Otros">Otros</option>
             </select>
           </div>
@@ -346,7 +388,7 @@ const RetiroForm: React.FC<RetiroFormProps> = ({ productos, onRetiro }) => {
         {/* Información de la Persona que Retira */}
         <div className="form-section">
           <h3 className="section-title">👤 Información de la Persona que Retira</h3>
-          
+
           {/* Nombre */}
           <div className="form-group">
             <label><strong>Nombre de la Persona *</strong></label>
@@ -377,6 +419,7 @@ const RetiroForm: React.FC<RetiroFormProps> = ({ productos, onRetiro }) => {
               <option value="Técnico">Técnico</option>
               <option value="Administrativo">Administrativo</option>
               <option value="Farmacéutico">Farmacéutico</option>
+              <option value="Paciente">Paciente</option>
               <option value="Otro">Otro</option>
             </select>
           </div>
@@ -444,17 +487,17 @@ const RetiroForm: React.FC<RetiroFormProps> = ({ productos, onRetiro }) => {
           >
             Limpiar Formulario
           </button>
-          
+
           <button
             type="submit"
             className="btn btn-primary"
             disabled={
-              !form.nombre || 
-              !form.tipoPresentacion || 
-              !form.lote || 
-              !form.persona.nombre || 
-              !form.persona.cargo || 
-              !form.fechaRetiro || 
+              !form.nombre ||
+              !form.tipoPresentacion ||
+              !form.lote ||
+              !form.persona.nombre ||
+              !form.persona.cargo ||
+              !form.fechaRetiro ||
               form.cantidad <= 0
             }
           >
@@ -479,11 +522,23 @@ const RetiroForm: React.FC<RetiroFormProps> = ({ productos, onRetiro }) => {
         }
         
         .section-title {
-          color: #102552;
+          color: #000;
           margin-top: 0;
           margin-bottom: 20px;
           padding-bottom: 10px;
           border-bottom: 2px solid #f0f2f5;
+          font-weight: 700;
+        }
+
+        .form-group label {
+          color: #000 !important;
+          display: block;
+          margin-bottom: 8px;
+        }
+
+        .form-input {
+          color: #000;
+          font-weight: 500;
         }
         
         .producto-info-card {
@@ -508,7 +563,7 @@ const RetiroForm: React.FC<RetiroFormProps> = ({ productos, onRetiro }) => {
         
         .info-label {
           font-weight: 600;
-          color: #666;
+          color: #000;
           font-size: 0.9em;
           margin-bottom: 5px;
         }
@@ -526,6 +581,7 @@ const RetiroForm: React.FC<RetiroFormProps> = ({ productos, onRetiro }) => {
           font-size: 0.9em;
           display: inline-block;
           width: fit-content;
+          font-weight: 600;
         }
         
         .cantidad-disponible {

@@ -23,7 +23,7 @@ interface HistorialProps {
 // Historial: Muestra la tabla con el historial de movimientos de insumos
 const Historial: React.FC<HistorialProps> = ({ historial }) => (
     <div className="productos-list">
-        <h2 className="productos-title">Historial de Mercancía</h2>
+        <h2 className="productos-title">Historial de Insumo</h2>
         {/* Contenedor con scroll añadido */}
         <div style={{ 
             maxHeight: '500px', 
