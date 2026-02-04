@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS pacientes (
 CREATE TABLE IF NOT EXISTS retiros (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   producto_id INTEGER NOT NULL,
-  paciente_id INTEGER NOT NULL,
+  paciente_id INTEGER,
   usuario_id INTEGER NOT NULL,
   cantidad INTEGER NOT NULL,
   tipo TEXT CHECK (tipo IN ('clinico','comercial')),

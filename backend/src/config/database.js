@@ -11,4 +11,9 @@ const db = new sqlite3.Database(dbPath, (err) => {
   }
 });
 
+db.serialize(() => {
+  db.run(`PRAGMA foreign_keys = ON;`);
+  db.run(`PRAGMA busy_timeout = 5000;`);
+});
+
 module.exports = db;

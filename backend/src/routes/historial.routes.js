@@ -6,9 +6,26 @@ const authMiddleware = require('../middlewares/auth.middleware');
 
 
 router.get('/mercancias', authMiddleware, (req, res) => {
-  db.all('SELECT * FROM retiros', [], (err, rows) => {
+  const sql = `
+    SELECT 
+      r.id,
+      p.nombre AS producto,
+      pa.nombre AS paciente,
+      u.usuario AS usuario,
+      r.cantidad,
+      r.tipo,
+      r.fecha_retiro
+    FROM retiros r
+    JOIN productos p ON r.producto_id = p.id
+    LEFT JOIN pacientes pa ON r.paciente_id = pa.id
+    JOIN usuarios u ON r.usuario_id = u.id
+    ORDER BY r.fecha_retiro DESC
+  `;
+
+  db.all(sql, [], (err, rows) => {
     if (err) {
-      return res.status(500).json(err);
+      console.error(err);
+      return res.status(500).json({ message: 'Error en el historial' });
     }
     res.json(rows);
   });
