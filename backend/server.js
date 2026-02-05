@@ -9,6 +9,7 @@ const userRoutes = require('./src/routes/user.routes');
 const retirosRoutes = require('./src/routes/retiros.routes');
 const productosRoutes = require('./src/routes/productos.routes');
 const historialRoutes = require('./src/routes/historial.routes');
+const reportesRoutes = require('./src/routes/reportes.routes');
 
 const app = express();
 
@@ -20,6 +21,8 @@ app.use('/api/users', userRoutes);
 app.use('/api/retiros', retirosRoutes);
 app.use('/api/productos', productosRoutes);
 app.use('/api/historial', historialRoutes);
+app.use('/api/reportes', reportesRoutes);
+
 
 app.get('/', (req, res) => {
   res.send('✅ API Farmacia funcionando');

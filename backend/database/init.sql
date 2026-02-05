@@ -31,21 +31,20 @@ CREATE TABLE IF NOT EXISTS pacientes (
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
-
-CREATE TABLE IF NOT EXISTS retiros (
+CREATE TABLE retiros (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   producto_id INTEGER NOT NULL,
   paciente_id INTEGER,
   usuario_id INTEGER NOT NULL,
   cantidad INTEGER NOT NULL,
-  tipo TEXT CHECK (tipo IN ('clinico','comercial')),
+  tipo TEXT CHECK (tipo IN ('clinico','comercial')) NOT NULL,
   observacion TEXT,
   fecha_retiro DATETIME DEFAULT CURRENT_TIMESTAMP,
+
   FOREIGN KEY (producto_id) REFERENCES productos(id),
   FOREIGN KEY (paciente_id) REFERENCES pacientes(id),
   FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
 );
-
 
 CREATE TABLE IF NOT EXISTS inventario_paciente (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
