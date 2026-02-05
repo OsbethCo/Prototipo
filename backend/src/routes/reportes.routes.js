@@ -6,11 +6,13 @@ const role = require('../middlewares/role.middleware');
 
 const {
   reporteClinicoPDF
-} = require('../controllers/reporteClinico.controller');
+} = require('../controllers/reportesclinico.controller');
 
 const {
   reporteComercialPDF
 } = require('../controllers/reportescomercial.controller');
+
+const reporteInventario = require('../controllers/reportesinventario.controller');
 
 // 🔹 Reporte clínico por paciente
 router.get(
@@ -26,6 +28,13 @@ router.get(
   auth,
   role(['supervisor']),
   reporteComercialPDF
+);
+
+router.get(
+  '/inventario',
+  auth,
+  role(['supervisor']),
+  reporteInventario
 );
 
 module.exports = router;
