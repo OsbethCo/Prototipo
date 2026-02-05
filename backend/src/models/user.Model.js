@@ -34,3 +34,20 @@ module.exports = {
   createUser,
   findByUsername,
 };
+
+// Buscar por id
+const findById = (id) => {
+  return new Promise((resolve, reject) => {
+    const sql = `SELECT * FROM usuarios WHERE id = ? AND activo = 1`;
+    db.get(sql, [id], (err, row) => {
+      if (err) reject(err);
+      else resolve(row);
+    });
+  });
+};
+
+module.exports = {
+  createUser,
+  findByUsername,
+  findById,
+};

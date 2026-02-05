@@ -2,9 +2,22 @@ import React, { useState } from 'react';
 import { useNotification } from '../context/NotificationContext';
 import logo from '../imagens/login_logo_premium.png';
 import '../styles/login.css';
+import { login } from '../services/authService';
 
 interface LoginProps {
-  onLogin: (usuario: string) => void;
+  onLogin: (user: { id: number; nombre: string; usuario: string; rol: 'supervisor'; createdAt?: string }) => void;
+}
+
+interface LoginResponse {
+  token: string;
+  refreshToken: string;
+  usuario: {
+    id: number;
+    nombre: string;
+    usuario: string;
+    rol: 'supervisor';
+    createdAt?: string;
+  };
 }
 
 const Login: React.FC<LoginProps> = ({ onLogin }) => {
@@ -15,26 +28,37 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [isExiting, setIsExiting] = useState(false);
   const { showNotification } = useNotification();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
 
-    // Vovemos a la validación local solicitada
-    setTimeout(() => {
-      if (usuario === 'admin' && password === '1234') {
-        showNotification(`¡Bienvenido de nuevo, ${usuario}!`, 'success');
-        setIsExiting(true);
-        setTimeout(() => {
-          onLogin(usuario);
-        }, 500); // Duración de la animación de salida
-      } else {
-        const msg = 'Usuario o contraseña incorrectos (Modo Prototipo)';
-        setError(msg);
-        showNotification(msg, 'error');
-        setIsLoading(false);
-      }
-    }, 600); // Simulamos una pequeña carga para mantener la sensación de fluidez
+    try {
+      const response: LoginResponse = await login(usuario, password);
+      
+      // Store tokens
+      localStorage.setItem('token', response.token);
+      localStorage.setItem('refreshToken', response.refreshToken);
+      localStorage.setItem('usuario', JSON.stringify(response.usuario));
+      
+      showNotification(`¡Bienvenido de nuevo, ${response.usuario.nombre}!`, 'success');
+      setIsExiting(true);
+      setTimeout(() => {
+        onLogin({
+          id: response.usuario.id,
+          nombre: response.usuario.nombre,
+          usuario: response.usuario.usuario,
+          rol: response.usuario.rol as 'supervisor',
+          createdAt: response.usuario.createdAt
+        });
+      }, 500);
+    } catch (err: any) {
+      const msg = err.response?.data?.message || 'Error al iniciar sesión';
+      setError(msg);
+      showNotification(msg, 'error');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

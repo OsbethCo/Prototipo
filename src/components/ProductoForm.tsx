@@ -1,17 +1,16 @@
 import { useState } from 'react';
 import { Producto } from '../types/Producto';
+import { crearProducto } from '../services/productosService';
 import '../styles/productoform.css';
 
-type ProductoFormData = Omit<Producto, 'id'>;
+type ProductoFormData = Omit<Producto, 'id'> & { tipo?: 'clinico' | 'comercial' };
 
 interface ProductoFormProps {
-  onAgregarClinico: (producto: ProductoFormData) => void;
-  onAgregarComercial: (producto: ProductoFormData) => void;
+  onProductoAgregado?: () => void;
 }
 
 const ProductoForm: React.FC<ProductoFormProps> = ({
-  onAgregarClinico,
-  onAgregarComercial,
+  onProductoAgregado,
 }) => {
   const [producto, setProducto] = useState<ProductoFormData>({
     nombre: '',
@@ -40,7 +39,7 @@ const ProductoForm: React.FC<ProductoFormProps> = ({
     }));
   };
 
-  const handleSubmit = (tipo: 'clinico' | 'comercial') => {
+  const handleSubmit = async (tipo: 'clinico' | 'comercial') => {
     if (
       !producto.nombre ||
       !producto.medida ||
@@ -51,9 +50,16 @@ const ProductoForm: React.FC<ProductoFormProps> = ({
       return;
     }
 
-    tipo === 'clinico'
-      ? onAgregarClinico(producto)
-      : onAgregarComercial(producto);
+    try {
+      await crearProducto({ ...producto, tipo });
+      alert(`Producto agregado correctamente como ${tipo}`);
+      if (onProductoAgregado) {
+        onProductoAgregado();
+      }
+    } catch (error) {
+      console.error('Error al crear producto:', error);
+      alert('Error al crear producto');
+    }
 
     setProducto({
       nombre: '',

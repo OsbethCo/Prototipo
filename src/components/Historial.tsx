@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import '../styles/productoslist.css';
 import { reportService } from '../services/exportService';
+import { obtenerHistorial } from '../services/retirosService';
 
 export interface HistorialItem {
   nombre: string;
@@ -19,11 +20,110 @@ export interface HistorialItem {
   };
 }
 
-interface HistorialProps {
-  historial: HistorialItem[];
-}
+const Historial: React.FC = () => {
+  const [historial, setHistorial] = useState<HistorialItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-const Historial: React.FC<HistorialProps> = ({ historial }) => {
+  const fetchHistorial = async () => {
+    try {
+      setLoading(true);
+      const data = await obtenerHistorial();
+      
+      // Transformar datos de la API al formato esperado
+      const historialTransformado: HistorialItem[] = data.map((item: any) => {
+        // Parsear observacion si existe
+        let observacion = {};
+        if (item.observacion) {
+          try {
+            observacion = typeof item.observacion === 'string' 
+              ? JSON.parse(item.observacion) 
+              : item.observacion;
+          } catch (e) {
+            console.warn('Error parsing observacion:', e);
+          }
+        }
+        
+        const destino = (observacion as any)?.destino || (item.paciente_nombre ? `Paciente: ${item.paciente_nombre}` : 'No especificado');
+        const persona = (observacion as any)?.persona || { nombre: item.usuario_nombre || 'No especificado', cargo: 'No especificado' };
+        
+        return {
+          nombre: item.producto_nombre || item.nombre || 'No especificado',
+          medida: item.medida || '',
+          cantidad: item.cantidad || 0,
+          lista: item.lote || '',
+          destino,
+          fechaRetiro: item.fecha_retiro || new Date().toISOString(),
+          categoria: item.tipo === 'clinico' ? 'Paciente' : 'Interno',
+          persona: {
+            nombre: persona.nombre || 'No especificado',
+            cargo: persona.cargo || 'No especificado',
+          },
+        };
+      });
+      
+      setHistorial(historialTransformado);
+      setError(null);
+    } catch (err: any) {
+      console.error('Error al cargar historial:', err);
+      console.error('Error response:', err.response?.data);
+      console.error('Error status:', err.response?.status);
+      
+      // Handle authentication errors
+      if (err.response?.status === 401) {
+        setError('Sesión expirada. Por favor, inicie sesión nuevamente.');
+      } else if (err.response?.status === 403) {
+        setError('No tiene permisos para ver el historial.');
+      } else {
+        setError(`Error al cargar el historial: ${err.response?.data?.message || err.message || 'Error desconocido'}`);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchHistorial();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="productos-list">
+        <h2 className="productos-title">Historial de Retiros</h2>
+        <div className="mensaje-vacio">Cargando...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="productos-list">
+        <h2 className="productos-title">Historial de Retiros</h2>
+        <div className="mensaje-vacio">
+          <p>{error}</p>
+          <button 
+            onClick={() => {
+              const token = localStorage.getItem('token');
+              if (!token) {
+                // Redirect to login
+                window.location.href = '/login';
+              } else {
+                // Retry loading
+                setError(null);
+                setLoading(true);
+                fetchHistorial();
+              }
+            }}
+            className="btn btn-primary"
+            style={{ marginTop: '1rem' }}
+          >
+            {error.includes('inicie sesión') ? 'Ir a Login' : 'Reintentar'}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (historial.length === 0) {
     return (
       <div className="productos-list">

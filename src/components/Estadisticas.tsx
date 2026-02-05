@@ -20,8 +20,8 @@ interface RetiroData {
 }
 
 interface EstadisticasRetirosProps {
-  productos: Producto[];
-  retiros: RetiroData[];
+  productos?: Producto[];
+  retiros?: RetiroData[];
   periodo?: 'hoy' | 'semana' | 'mes' | 'todo';
 }
 
@@ -29,8 +29,8 @@ type TipoGrafico = 'barras' | 'pastel' | 'lineas';
 type FiltroCargo = 'todos' | 'Enfermera' | 'Médico' | 'Técnico' | 'Administrativo' | 'Farmacéutico';
 
 const EstadisticasRetiros: React.FC<EstadisticasRetirosProps> = ({
-  productos,
-  retiros,
+  productos = [],
+  retiros = [],
   periodo = 'mes'
 }) => {
   const [tipoGrafico, setTipoGrafico] = useState<TipoGrafico>('barras');

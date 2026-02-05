@@ -18,10 +18,17 @@ router.post(
       nombre,
       medida,
       lote,
-      fecha_vencimiento,
-      stock_actual,
-      stock_minimo,
-      ubicacion
+      fechaVencimiento,
+      cantidad,
+      stock,
+      categoria,
+      tipoPresentacion,
+      unidadMedida,
+      ubicacion,
+      proveedor,
+      condicionesAlmacenamiento,
+      codigo,
+      tipo
     } = req.body;
 
     if (!nombre) {
@@ -29,9 +36,9 @@ router.post(
     }
 
     const sql = `
-      INSERT INTO productos
-      (nombre, medida, lote, fecha_vencimiento, stock_actual, stock_minimo, ubicacion)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO productos 
+      (nombre, medida, lote, fecha_vencimiento, stock_actual, stock_minimo, categoria, tipo_presentacion, unidad_medida, ubicacion, proveedor, condiciones_almacenamiento, codigo, tipo)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     db.run(
@@ -40,10 +47,17 @@ router.post(
         nombre,
         medida || null,
         lote || null,
-        fecha_vencimiento || null,
-        stock_actual || 0,
-        stock_minimo || 0,
-        ubicacion || null
+        fechaVencimiento || null,
+        cantidad || 0,
+        stock || 0,
+        categoria || 'Medicamento',
+        tipoPresentacion || null,
+        unidadMedida || null,
+        ubicacion || null,
+        proveedor || null,
+        condicionesAlmacenamiento || null,
+        codigo || null,
+        tipo || null
       ],
       function (err) {
         if (err) {
@@ -71,7 +85,24 @@ router.get(
       if (err) {
         return res.status(500).json({ message: 'Error al obtener productos' });
       }
-      res.json(rows);
+      // Map database columns to frontend format
+      const productos = rows.map(row => ({
+        id: row.id,
+        nombre: row.nombre,
+        medida: row.medida,
+        lote: row.lote,
+        cantidad: row.stock_actual,
+        fechaVencimiento: row.fecha_vencimiento,
+        categoria: row.categoria,
+        stock: row.stock_minimo,
+        tipoPresentacion: row.tipo_presentacion,
+        unidadMedida: row.unidad_medida,
+        ubicacion: row.ubicacion,
+        proveedor: row.proveedor,
+        condicionesAlmacenamiento: row.condiciones_almacenamiento,
+        codigo: row.codigo,
+      }));
+      res.json(productos);
     });
   }
 );
@@ -111,6 +142,35 @@ router.put(
 
       res.json({
         message: 'Stock actualizado correctamente'
+      });
+    });
+  }
+);
+
+
+router.delete(
+  '/:id',
+  auth,
+  role(['supervisor']),
+  (req, res) => {
+    const { id } = req.params;
+
+    const sql = `DELETE FROM productos WHERE id = ?`;
+
+    db.run(sql, [id], function (err) {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ message: 'Error al eliminar producto' });
+      }
+
+      if (this.changes === 0) {
+        return res
+          .status(404)
+          .json({ message: 'Producto no encontrado' });
+      }
+
+      res.json({
+        message: 'Producto eliminado correctamente'
       });
     });
   }

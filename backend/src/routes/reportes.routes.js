@@ -5,7 +5,9 @@ const auth = require('../middlewares/auth.middleware');
 const role = require('../middlewares/role.middleware');
 
 const {
-  reporteClinicoPDF
+  reporteClinicoPDF,
+  reporteHistorialPDF,
+  reporteInventarioPacientePDF
 } = require('../controllers/reportesclinico.controller');
 
 const {
@@ -22,6 +24,14 @@ router.get(
   reporteClinicoPDF
 );
 
+// 🔹 Reporte general de historial de retiros
+router.get(
+  '/historial',
+  auth,
+  role(['trabajador', 'supervisor']),
+  reporteHistorialPDF
+);
+
 // 🔹 Reporte comercial (todos)
 router.get(
   '/comercial',
@@ -35,6 +45,14 @@ router.get(
   auth,
   role(['supervisor']),
   reporteInventario
+);
+
+// 🔹 Reporte de inventario de pacientes
+router.get(
+  '/inventario-paciente',
+  auth,
+  role(['trabajador', 'supervisor']),
+  reporteInventarioPacientePDF
 );
 
 module.exports = router;

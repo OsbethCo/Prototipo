@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Producto } from "../types/Producto";
+import { crearRetiro, obtenerRetiros, obtenerProductosRetiro } from "../services/retirosService";
 import "../styles/productoform.css";
 
-// Definir RetiroData localmente (o importar desde App.tsx si está exportado)
 interface RetiroData {
   nombre: string;
   tipoPresentacion: string;
@@ -19,11 +19,11 @@ interface RetiroData {
 }
 
 interface RetiroFormProps {
-  productos: Producto[];
-  onRetiro: (data: RetiroData) => void;
+  productos?: Producto[];
+  onRetiroGuardado?: () => void;
 }
 
-const RetiroForm: React.FC<RetiroFormProps> = ({ productos, onRetiro }) => {
+const RetiroForm: React.FC<RetiroFormProps> = ({ productos = [], onRetiroGuardado }) => {
   const [form, setForm] = useState({
     nombre: "",
     tipoPresentacion: "",
@@ -43,16 +43,58 @@ const RetiroForm: React.FC<RetiroFormProps> = ({ productos, onRetiro }) => {
   const [productosDisponibles, setProductosDisponibles] = useState<Producto[]>([]);
   const [presentacionesDisponibles, setPresentacionesDisponibles] = useState<string[]>([]);
   const [lotesDisponibles, setLotesDisponibles] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Inicializar productos disponibles
+  // Cargar productos desde la base de datos
   useEffect(() => {
-    setProductosDisponibles(productos.filter(p => p.cantidad > 0));
+    const fetchProductos = async () => {
+      try {
+        setLoading(true);
+        const data = await obtenerProductosRetiro();
+        console.log('Datos recibidos:', data);
+        // Mapear campos del backend al formato del frontend
+        if (Array.isArray(data) && data.length > 0) {
+          const productosMapeados = data.map((p: any) => ({
+            id: p.id,
+            nombre: p.nombre,
+            medida: p.medida || p.tipo_presentacion || p.unidad_medida || '',
+            lote: p.lote,
+            cantidad: p.cantidad !== undefined ? p.cantidad : p.stock_actual,
+            fechaVencimiento: p.fecha_vencimiento,
+            categoria: p.categoria,
+            stock: p.stock_minimo || 0,
+            tipoPresentacion: p.tipo_presentacion,
+            unidadMedida: p.unidad_medida,
+          }));
+          setProductosDisponibles(productosMapeados.filter((p: any) => p.cantidad > 0));
+          setError(null);
+        } else {
+          setProductosDisponibles([]);
+          setError(null);
+        }
+      } catch (err: any) {
+        console.error('Error al cargar productos:', err);
+        setError('Error al cargar productos: ' + (err.message || 'Error desconocido'));
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProductos();
+  }, []);
+
+  // Inicializar productos disponibles cuando se reciben como props
+  useEffect(() => {
+    if (productos && productos.length > 0) {
+      setProductosDisponibles(productos.filter(p => p.cantidad > 0));
+    }
   }, [productos]);
 
   // Cuando cambia el producto seleccionado
   const handleProductoChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const nombreSeleccionado = e.target.value;
-    const productosFiltrados = productos.filter(p => p.nombre === nombreSeleccionado && p.cantidad > 0);
+    const productosFiltrados = productosDisponibles.filter(p => p.nombre === nombreSeleccionado && p.cantidad > 0);
 
     // Obtener presentaciones únicas
     const presentaciones = Array.from(
@@ -79,7 +121,7 @@ const RetiroForm: React.FC<RetiroFormProps> = ({ productos, onRetiro }) => {
   // Cuando cambia la presentación
   const handlePresentacionChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const presentacion = e.target.value;
-    const productosFiltrados = productos.filter(
+    const productosFiltrados = productosDisponibles.filter(
       p => p.nombre === form.nombre &&
         p.medida === presentacion &&
         p.cantidad > 0
@@ -149,7 +191,7 @@ const RetiroForm: React.FC<RetiroFormProps> = ({ productos, onRetiro }) => {
   }, [form.persona.cargo]);
 
   // Obtener producto seleccionado para validar cantidad máxima
-  const productoSeleccionado = productos.find(
+  const productoSeleccionado = productosDisponibles.find(
     p => p.nombre === form.nombre &&
       p.medida === form.tipoPresentacion &&
       p.lote === form.lote
@@ -159,7 +201,7 @@ const RetiroForm: React.FC<RetiroFormProps> = ({ productos, onRetiro }) => {
   const cantidadMaxima = productoSeleccionado?.cantidad || 0;
 
   // Manejar envío del formulario
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     // Validaciones
@@ -179,7 +221,7 @@ const RetiroForm: React.FC<RetiroFormProps> = ({ productos, onRetiro }) => {
     }
 
     // Crear objeto RetiroData
-    const data: RetiroData = {
+    const data = {
       nombre: form.nombre,
       tipoPresentacion: form.tipoPresentacion,
       lote: form.lote,
@@ -194,29 +236,58 @@ const RetiroForm: React.FC<RetiroFormProps> = ({ productos, onRetiro }) => {
       },
     };
 
-    // Llamar a la función callback
-    onRetiro(data);
-
-    // Resetear formulario (mantener fecha actual)
-    setForm({
-      nombre: "",
-      tipoPresentacion: "",
-      lote: "",
-      cantidad: 1,
-      unidadMedida: "",
-      fechaRetiro: new Date().toISOString().split("T")[0],
-      paciente: "",
-      destino: "",
-      persona: {
+    try {
+      await crearRetiro(data);
+      alert("✅ Retiro registrado correctamente");
+      if (onRetiroGuardado) {
+        onRetiroGuardado();
+      }
+      
+      // Resetear formulario (mantener fecha actual)
+      setForm({
         nombre: "",
-        cargo: "",
-      },
-    });
+        tipoPresentacion: "",
+        lote: "",
+        cantidad: 1,
+        unidadMedida: "",
+        fechaRetiro: new Date().toISOString().split("T")[0],
+        paciente: "",
+        destino: "",
+        persona: {
+          nombre: "",
+          cargo: "",
+        },
+      });
 
-    // Resetear opciones dinámicas
-    setPresentacionesDisponibles([]);
-    setLotesDisponibles([]);
+      // Resetear opciones dinámicas
+      setPresentacionesDisponibles([]);
+      setLotesDisponibles([]);
+    } catch (error) {
+      console.error('Error al crear retiro:', error);
+      alert("❌ Error al registrar el retiro");
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="retiro-form-container">
+        <div className="loading-message">Cargando productos...</div>
+      </div>
+    );
+  }
+
+  // Si hay error pero hay productos de props, usar esos
+  if (error && productos.length > 0) {
+    setError(null);
+  }
+
+  if (error && productos.length === 0) {
+    return (
+      <div className="retiro-form-container">
+        <div className="error-message">{error}</div>
+      </div>
+    );
+  }
 
   return (
     <div className="retiro-form-container">
@@ -472,6 +543,7 @@ const RetiroForm: React.FC<RetiroFormProps> = ({ productos, onRetiro }) => {
                 tipoPresentacion: "",
                 lote: "",
                 cantidad: 1,
+                unidadMedida: "",
                 fechaRetiro: new Date().toISOString().split("T")[0],
                 paciente: "",
                 destino: "",
@@ -505,146 +577,6 @@ const RetiroForm: React.FC<RetiroFormProps> = ({ productos, onRetiro }) => {
           </button>
         </div>
       </form>
-
-      {/* Estilos adicionales */}
-      <style>{`
-        .retiro-form-container {
-          max-width: 800px;
-          margin: 0 auto;
-        }
-        
-        .form-section {
-          background: white;
-          border-radius: 8px;
-          padding: 20px;
-          margin-bottom: 20px;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        
-        .section-title {
-          color: #000;
-          margin-top: 0;
-          margin-bottom: 20px;
-          padding-bottom: 10px;
-          border-bottom: 2px solid #f0f2f5;
-          font-weight: 700;
-        }
-
-        .form-group label {
-          color: #000 !important;
-          display: block;
-          margin-bottom: 8px;
-        }
-
-        .form-input {
-          color: #000;
-          font-weight: 500;
-        }
-        
-        .producto-info-card {
-          background: #f8f9fa;
-          border-radius: 8px;
-          padding: 20px;
-          margin-bottom: 20px;
-          border: 1px solid #dee2e6;
-        }
-        
-        .info-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-          gap: 15px;
-          margin-top: 15px;
-        }
-        
-        .info-item {
-          display: flex;
-          flex-direction: column;
-        }
-        
-        .info-label {
-          font-weight: 600;
-          color: #000;
-          font-size: 0.9em;
-          margin-bottom: 5px;
-        }
-        
-        .info-value {
-          font-size: 1em;
-          color: #333;
-        }
-        
-        .badge {
-          background: #e8f5e9;
-          color: #2e7d32;
-          padding: 4px 10px;
-          border-radius: 12px;
-          font-size: 0.9em;
-          display: inline-block;
-          width: fit-content;
-          font-weight: 600;
-        }
-        
-        .cantidad-disponible {
-          color: #1976d2;
-          font-weight: bold;
-        }
-        
-        .form-buttons {
-          display: flex;
-          justify-content: space-between;
-          gap: 15px;
-          margin-top: 30px;
-        }
-        
-        .btn {
-          flex: 1;
-          padding: 12px 20px;
-          border: none;
-          border-radius: 6px;
-          font-size: 16px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.3s ease;
-          text-align: center;
-        }
-        
-        .btn-primary {
-          background: #102552;
-          color: white;
-        }
-        
-        .btn-primary:hover:not(:disabled) {
-          background: #0d1f4d;
-          transform: translateY(-2px);
-          box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-        }
-        
-        .btn-primary:disabled {
-          background: #cccccc;
-          cursor: not-allowed;
-        }
-        
-        .btn-secondary {
-          background: #6c757d;
-          color: white;
-        }
-        
-        .btn-secondary:hover {
-          background: #5a6268;
-          transform: translateY(-2px);
-          box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        }
-        
-        @media (max-width: 768px) {
-          .form-buttons {
-            flex-direction: column;
-          }
-          
-          .info-grid {
-            grid-template-columns: 1fr;
-          }
-        }
-      `}</style>
     </div>
   );
 };

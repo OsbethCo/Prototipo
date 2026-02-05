@@ -1,20 +1,50 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Producto } from '../types/Producto';
 import '../styles/productoslist.css';
 import { reportService } from '../services/exportService';
+import { obtenerProductos, eliminarProducto } from '../services/productosService';
 
 interface ListaClinicaProps {
-  productos: Producto[];
   onVerDetalle: (producto: Producto) => void;
   onEliminar?: (id: string) => void; // ✅ ahora opcional
 }
 
 const ListaClinica: React.FC<ListaClinicaProps> = ({
-  productos,
   onVerDetalle,
   onEliminar,
 }) => {
+  const [productos, setProductos] = useState<Producto[]>([]);
   const [busqueda, setBusqueda] = useState('');
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    cargarProductos();
+  }, []);
+
+  const cargarProductos = async () => {
+    try {
+      setCargando(true);
+      setError(null);
+      const data = await obtenerProductos();
+      setProductos(data);
+    } catch (err) {
+      setError('Error al cargar los productos');
+      console.error(err);
+    } finally {
+      setCargando(false);
+    }
+  };
+
+  const handleEliminar = async (id: string) => {
+    try {
+      await eliminarProducto(id);
+      setProductos(productos.filter(p => p.id !== id));
+    } catch (err) {
+      setError('Error al eliminar el producto');
+      console.error(err);
+    }
+  };
 
   const productosFiltrados = productos.filter(p =>
     p.nombre.toLowerCase().includes(busqueda.toLowerCase())
@@ -42,11 +72,14 @@ const ListaClinica: React.FC<ListaClinicaProps> = ({
         </button>
       </div>
 
-      {productosFiltrados.length === 0 && (
+      {cargando && <div className="mensaje-vacio">Cargando productos...</div>}
+      {error && <div className="mensaje-vacio" style={{ color: 'red' }}>{error}</div>}
+
+      {!cargando && !error && productosFiltrados.length === 0 && (
         <div className="mensaje-vacio">No hay productos registrados.</div>
       )}
 
-      {productosFiltrados.length > 0 && (
+      {!cargando && !error && productosFiltrados.length > 0 && (
         <div className="table-responsive">
           <table className="productos-table">
             <thead>
@@ -86,14 +119,12 @@ const ListaClinica: React.FC<ListaClinicaProps> = ({
                       Información
                     </button>
 
-                    {onEliminar && (
-                      <button
-                        onClick={() => onEliminar(producto.id)}
-                        className="productos-delete"
-                      >
-                        Eliminar
-                      </button>
-                    )}
+                    <button
+                      onClick={() => handleEliminar(producto.id)}
+                      className="productos-delete"
+                    >
+                      Eliminar
+                    </button>
                   </td>
                 </tr>
               ))}

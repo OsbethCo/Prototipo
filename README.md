@@ -38,6 +38,54 @@ npm start
 ```
 This will start the development server and open the application in your default web browser.
 
+## Ejecutar backend y frontend (Windows)
+
+Instrucciones rápidas para ejecutar ambos servidores en Windows (PowerShell o cmd).
+
+- Abrir una terminal para el backend, instalar dependencias e iniciar el servidor:
+
+```powershell
+cd backend
+npm install
+# opción 1: ejecutar directamente el servidor
+node server.js
+
+# opción 2: si quieres usar npm start, actualiza primero `backend/package.json`
+# para que el script `start` apunte a `node server.js`, luego:
+npm start
+```
+
+- Abrir otra terminal en la raíz del proyecto para el frontend, instalar dependencias e iniciar:
+
+```powershell
+cd ..\
+npm install
+npm start
+```
+
+Notas:
+- El backend expone la API en `http://localhost:3001` por defecto.
+- El frontend corre en `http://localhost:3000`.
+- Para probar endpoints protegidos por JWT (por ejemplo `/api/productos`) primero haz login en `/api/auth/login` y añade el header `Authorization: Bearer <token>`.
+- Si encuentras un error sobre ejecución de scripts en PowerShell (npm.ps1), puedes usar `cmd` en su lugar o ajustar la política de ejecución:
+
+```powershell
+Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
+
+Comandos útiles para pruebas rápidas (PowerShell):
+
+```powershell
+# Login y obtener token
+$resp = Invoke-RestMethod -Uri 'http://localhost:3001/api/auth/login' -Method POST -ContentType 'application/json' -Body (ConvertTo-Json @{ usuario='admin'; password='123' })
+$token = $resp.token
+
+# Llamada autenticada a productos
+Invoke-RestMethod -Uri 'http://localhost:3001/api/productos' -Headers @{ Authorization = "Bearer $token" }
+```
+
+Si quieres, actualizo `backend/package.json` para que `npm start` funcione sin editar manualmente.
+
 ### Building for Production
 
 To create a production build of the application, run:

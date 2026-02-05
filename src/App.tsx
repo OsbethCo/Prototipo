@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 // UI
 import Sidebar from './components/Sidebar';
@@ -18,9 +18,18 @@ import GestionPacientes from './components/GestionPacientes';
 // Types
 import { Producto } from './types/Producto';
 
+// Styles
 import './styles/index.css';
 import './styles/modal.css';
 
+// User Profile Type (Solo supervisor)
+interface UserProfile {
+  id: number;
+  nombre: string;
+  usuario: string;
+  rol: 'supervisor';
+  createdAt?: string;
+}
 
 type Section =
   | 'clinica'
@@ -32,145 +41,43 @@ type Section =
   | 'historial'
   | 'retirarProducto';
 
-type ProductoSinId = Omit<Producto, 'id'>;
-
-// --------------------
-// RETIROS
-// --------------------
-export interface RetiroData {
-  nombre: string;
-  tipoPresentacion: string;
-  lote: string;
-  cantidad: number;
-  unidadMedida?: string;
-  fechaRetiro: string;
-  paciente?: string;
-  destino?: string;
-  persona: {
-    nombre: string;
-    cargo: string;
-  };
-}
-
-interface HistorialItem {
-  nombre: string;
-  medida: string;
-  unidadMedida?: string;
-  lista: string;
-  cantidad: number;
-  destino?: string;
-  fechaRetiro: string;
-  categoria: 'Interno' | 'Paciente';
-  persona: {
-    nombre: string;
-    apellido: string;
-    cargo: string;
-  };
-}
-
-interface RegistroPaciente {
-  producto: string;
-  paciente: string;
-  medida: string;
-  unidadMedida?: string;
-  lugar: string;
-  serie: string;
-  lista: string;
-  fechaRetiro: string;
-  personaRetiro: string;
-  cargo: string;
-}
-
 const App: React.FC = () => {
-  const [usuario, setUsuario] = useState<string | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [section, setSection] = useState<Section>('dashboard');
-
-  const [productosClinicos, setProductosClinicos] = useState<Producto[]>([]);
-  const [productosComerciales, setProductosComerciales] = useState<Producto[]>([]);
-
   const [productoDetalle, setProductoDetalle] = useState<Producto | null>(null);
-  const [historial, setHistorial] = useState<HistorialItem[]>([]);
-  const [pacientesRegistrados, setPacientesRegistrados] = useState<RegistroPaciente[]>([]);
 
-  if (!usuario) {
-    return <Login onLogin={setUsuario} />;
+  // Cargar perfil de usuario desde localStorage al iniciar
+  useEffect(() => {
+    const storedUser = localStorage.getItem('usuario');
+    if (storedUser) {
+      try {
+        const user = JSON.parse(storedUser);
+        setUserProfile({
+          id: user.id,
+          nombre: user.nombre,
+          usuario: user.usuario,
+          rol: user.rol || 'trabajador',
+          createdAt: user.createdAt
+        });
+      } catch (e) {
+        console.error('Error parsing user from localStorage:', e);
+      }
+    }
+  }, []);
+
+  if (!userProfile) {
+    return <Login onLogin={setUserProfile} />;
   }
 
-  // --------------------
-  // AGREGAR PRODUCTOS
-  // --------------------
-  const agregarClinico = (producto: ProductoSinId) => {
-    setProductosClinicos(prev => [
-      ...prev,
-      { ...producto, id: crypto.randomUUID() },
-    ]);
+  // Verificar si es admin/supervisor
+  const isAdmin = userProfile.rol === 'supervisor' || userProfile.rol === 'admin' || userProfile.rol === 'Administrador';
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('usuario');
+    setUserProfile(null);
   };
-
-  const agregarComercial = (producto: ProductoSinId) => {
-    setProductosComerciales(prev => [
-      ...prev,
-      { ...producto, id: crypto.randomUUID() },
-    ]);
-  };
-
-  // --------------------
-  // RETIROS
-  // --------------------
-  const handleRetiro = (data: RetiroData) => {
-    setHistorial(prev => [
-      ...prev,
-      {
-        nombre: data.nombre,
-        medida: data.tipoPresentacion,
-        unidadMedida: data.unidadMedida,
-        lista: data.lote,
-        cantidad: data.cantidad,
-        destino: data.destino,
-        fechaRetiro: data.fechaRetiro,
-        categoria: (typeof data.paciente === 'string' && data.paciente.trim() !== '') ? 'Paciente' : 'Interno',
-        persona: {
-          nombre: data.persona.nombre,
-          apellido: '',
-          cargo: data.persona.cargo,
-        },
-      },
-    ]);
-
-    if (typeof data.paciente === 'string' && data.paciente.trim() !== '') {
-      setPacientesRegistrados(prev => [
-        ...prev,
-        {
-          producto: data.nombre,
-          paciente: data.paciente as string,
-          medida: data.tipoPresentacion,
-          unidadMedida: data.unidadMedida,
-          lugar: data.destino ?? 'No especificado',
-          serie: data.lote,
-          lista: data.lote,
-          fechaRetiro: data.fechaRetiro,
-          personaRetiro: data.persona.nombre,
-          cargo: data.persona.cargo,
-        },
-      ]);
-    }
-
-    const actualizar = (lista: Producto[]) =>
-      lista.map(p =>
-        p.nombre === data.nombre && p.lote === data.lote
-          ? { ...p, cantidad: Math.max(0, p.cantidad - data.cantidad) }
-          : p
-      );
-
-    if (productosClinicos.some(p => p.nombre === data.nombre && p.lote === data.lote)) {
-      setProductosClinicos(actualizar);
-    } else {
-      setProductosComerciales(actualizar);
-    }
-  };
-
-  // --------------------
-  // NAVEGACIÓN
-  // --------------------
   const handleSelectSection = (value: string) => {
     setSection(value as Section);
   };
@@ -179,27 +86,26 @@ const App: React.FC = () => {
   // VISTAS
   // --------------------
   const renderContent = () => {
+    // Si no es admin y intenta acceder a secciones de admin, redirigir a dashboard
+    if (!isAdmin && (section === 'agregarProducto' || section === 'estadisticas')) {
+      setSection('dashboard');
+    }
+    
     switch (section) {
       case 'dashboard':
         return (
           <Dashboard
-            productos={[...productosClinicos, ...productosComerciales]}
-            historial={historial}
+            userProfile={userProfile}
           />
         );
       case 'clinica':
-        return <ListaClinica productos={productosClinicos} onVerDetalle={setProductoDetalle} />;
+        return <ListaClinica onVerDetalle={setProductoDetalle} />;
       case 'pacientes':
         return (
           <GestionPacientes
             key="inv-view"
             initialTab="inventario"
-            productos={productosComerciales}
-            pacientes={pacientesRegistrados}
             onVerDetalle={setProductoDetalle}
-            onEliminarProducto={(idx) => {
-              setProductosComerciales(prev => prev.filter((_, i) => i !== idx));
-            }}
           />
         );
       case 'gestionPacientes':
@@ -207,48 +113,27 @@ const App: React.FC = () => {
           <GestionPacientes
             key="hist-view"
             initialTab="historial"
-            productos={productosComerciales}
-            pacientes={pacientesRegistrados}
             onVerDetalle={setProductoDetalle}
-            onEliminarProducto={(idx) => {
-              setProductosComerciales(prev => prev.filter((_, i) => i !== idx));
-            }}
           />
         );
       case 'agregarProducto':
-        return (
-          <ProductoForm
-            onAgregarClinico={agregarClinico}
-            onAgregarComercial={agregarComercial}
-          />
-        );
+        // Solo admin puede acceder
+        if (!isAdmin) {
+          setSection('dashboard');
+          return null;
+        }
+        return <ProductoForm />;
       case 'retirarProducto':
-        return (
-          <RetiroForm
-            productos={[...productosClinicos, ...productosComerciales]}
-            onRetiro={handleRetiro}
-          />
-        );
+        return <RetiroForm />;
       case 'historial':
-        return <Historial historial={historial} />;
+        return <Historial />;
       case 'estadisticas':
-        return (
-          <Estadisticas
-            productos={[...productosClinicos, ...productosComerciales]}
-            retiros={historial.map(h => ({
-              nombre: h.nombre,
-              tipoPresentacion: h.medida,
-              lote: h.lista,
-              cantidad: h.cantidad,
-              fechaRetiro: h.fechaRetiro,
-              persona: {
-                nombre: h.persona.nombre,
-                cargo: h.persona.cargo
-              },
-              categoria: h.categoria
-            }))}
-          />
-        );
+        // Solo admin puede acceder
+        if (!isAdmin) {
+          setSection('dashboard');
+          return null;
+        }
+        return <Estadisticas />;
       default:
         return null;
     }
@@ -256,7 +141,13 @@ const App: React.FC = () => {
 
   return (
     <div className="App">
-      <Sidebar onSelect={handleSelectSection} onLogout={() => setUsuario(null)} activeSection={section} />
+      <Sidebar 
+        onSelect={handleSelectSection} 
+        onLogout={handleLogout} 
+        activeSection={section} 
+        userProfile={userProfile}
+        isAdmin={isAdmin}
+      />
       <main>
         <Header />
         <div key={section} className="animate-fade-in">

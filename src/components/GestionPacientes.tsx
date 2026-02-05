@@ -1,6 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Producto } from '../types/Producto';
 import { reportService } from '../services/exportService';
+import { obtenerRegistrosPacientes, obtenerInventarioPaciente, obtenerTodosRegistros } from '../services/retirosService';
 import '../styles/productoslist.css';
 
 export interface RegistroPaciente {
@@ -14,12 +15,13 @@ export interface RegistroPaciente {
     fechaRetiro: string;
     personaRetiro: string;
     cargo: string;
+    cantidad?: number;
 }
 
 interface GestionPacientesProps {
-    productos: Producto[];
-    pacientes: RegistroPaciente[];
-    onVerDetalle: (producto: Producto) => void;
+    productos?: Producto[];
+    pacientes?: RegistroPaciente[];
+    onVerDetalle?: (producto: Producto) => void;
     onEliminarProducto?: (index: number) => void;
     initialTab?: Tab;
 }
@@ -28,18 +30,101 @@ type Tab = 'inventario' | 'historial';
 type ColumnaPaciente = keyof RegistroPaciente;
 
 const GestionPacientes: React.FC<GestionPacientesProps> = ({
-    productos,
-    pacientes,
+    productos: propsProductos,
+    pacientes: propsPacientes,
     onVerDetalle,
     onEliminarProducto,
     initialTab = 'inventario',
 }) => {
     const [activeTab, setActiveTab] = useState<Tab>(initialTab);
     const [busqueda, setBusqueda] = useState('');
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    
+    // Estados para datos de la base de datos
+    const [dbInventario, setDbInventario] = useState<any[]>([]);
+    const [dbRegistros, setDbRegistros] = useState<any[]>([]);
 
     // Estados para el historial
     const [columnaOrden, setColumnaOrden] = useState<ColumnaPaciente | null>(null);
     const [ordenAscendente, setOrdenAscendente] = useState(true);
+
+    // Fetch data from database
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                setLoading(true);
+                setError(null);
+                
+                const [inventario, registros] = await Promise.all([
+                    obtenerInventarioPaciente(),
+                    obtenerTodosRegistros()
+                ]);
+                
+                setDbInventario(inventario);
+                setDbRegistros(registros);
+            } catch (err: any) {
+                console.error('Error fetching patient data:', err);
+                setError(`Error al cargar datos: ${err.response?.data?.message || err.message || 'Error desconocido'}`);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchData();
+    }, []);
+
+    // Transformar datos del inventario para la tabla
+    const productosTransformados: Producto[] = useMemo(() => {
+        return dbInventario.map((item: any) => ({
+            id: String(item.producto_id),
+            nombre: item.producto_nombre,
+            medida: item.medida || item.tipo_presentacion,
+            cantidad: item.cantidad,
+            lote: item.lote,
+            categoria: 'Medicamento', // Valor por defecto para inventario de pacientes
+            stock: item.cantidad,
+            ubicacion: item.area ? `Área: ${item.area}${item.cama ? ` - Cama: ${item.cama}` : ''}` : undefined,
+            fechaVencimiento: '-',
+        }));
+    }, [dbInventario]);
+
+    // Transformar registros para la tabla de historial
+    const pacientesTransformados: RegistroPaciente[] = useMemo(() => {
+        return dbRegistros.map((item: any) => {
+            // Parsear observacion si existe
+            let observacion = {};
+            if (item.observacion) {
+                try {
+                    observacion = typeof item.observacion === 'string' 
+                        ? JSON.parse(item.observacion) 
+                        : item.observacion;
+                } catch (e) {
+                    console.warn('Error parsing observacion:', e);
+                }
+            }
+
+            const personaInfo = (observacion as any)?.persona || {};
+            
+            return {
+                producto: item.producto_nombre || 'No especificado',
+                paciente: item.paciente_nombre || 'No especificado',
+                medida: item.medida || '',
+                unidadMedida: item.unidad_medida || '',
+                lugar: item.area ? `Área: ${item.area}${item.cama ? ` - Cama: ${item.cama}` : ''}` : undefined,
+                serie: item.cedula || undefined,
+                lista: item.lote || '',
+                cantidad: item.cantidad,
+                fechaRetiro: item.fecha_retiro || new Date().toISOString(),
+                personaRetiro: item.usuario_nombre || personaInfo.nombre || 'No especificado',
+                cargo: personaInfo.cargo || 'No especificado',
+            };
+        });
+    }, [dbRegistros]);
+
+    // Usar datos de props o de la base de datos
+    const productos = propsProductos || productosTransformados;
+    const pacientes = propsPacientes || pacientesTransformados;
 
     // Filtrado de Inventario
     const productosFiltrados = productos.filter(p =>
@@ -92,6 +177,39 @@ const GestionPacientes: React.FC<GestionPacientesProps> = ({
             hour: '2-digit', minute: '2-digit',
         });
     };
+
+    // Mostrar estado de carga
+    if (loading) {
+        return (
+            <div className="productos-list">
+                <div className="gestion-header">
+                    <h2 className="productos-title">Gestión de Pacientes</h2>
+                </div>
+                <div className="mensaje-vacio">Cargando datos...</div>
+            </div>
+        );
+    }
+
+    // Mostrar error
+    if (error) {
+        return (
+            <div className="productos-list">
+                <div className="gestion-header">
+                    <h2 className="productos-title">Gestión de Pacientes</h2>
+                </div>
+                <div className="mensaje-vacio">
+                    <p>{error}</p>
+                    <button 
+                        onClick={() => window.location.reload()}
+                        className="btn btn-primary"
+                        style={{ marginTop: '1rem' }}
+                    >
+                        Reintentar
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="productos-list">
@@ -159,7 +277,9 @@ const GestionPacientes: React.FC<GestionPacientesProps> = ({
                                         <td><span className="lot-badge">{p.lote}</span></td>
                                         <td>{p.ubicacion || '—'}</td>
                                         <td className="acciones">
-                                            <button onClick={() => onVerDetalle(p)} className="productos-details">Ver Info</button>
+                                            {onVerDetalle && (
+                                                <button onClick={() => onVerDetalle(p)} className="productos-details">Ver Info</button>
+                                            )}
                                             {onEliminarProducto && (
                                                 <button onClick={() => onEliminarProducto(i)} className="productos-delete">Borrar</button>
                                             )}
@@ -179,7 +299,7 @@ const GestionPacientes: React.FC<GestionPacientesProps> = ({
                             <thead>
                                 <tr>
                                     <th onClick={() => manejarOrdenar('paciente')} className="sortable">Paciente {obtenerIconoOrden('paciente')}</th>
-                                    <td onClick={() => manejarOrdenar('producto')} className="sortable">Producto {obtenerIconoOrden('producto')}</td>
+                                    <th onClick={() => manejarOrdenar('producto')} className="sortable">Producto {obtenerIconoOrden('producto')}</th>
                                     <th>Cantidad / Medida</th>
                                     <th>Lugar</th>
                                     <th>Serie/Lista</th>
@@ -195,7 +315,7 @@ const GestionPacientes: React.FC<GestionPacientesProps> = ({
                                         <td>
                                             <div style={{ display: 'flex', flexDirection: 'column' }}>
                                                 <span style={{ fontWeight: 600, color: '#2563eb' }}>
-                                                    {p.unidadMedida ? `${p.unidadMedida}` : p.medida || '-'}
+                                                    {p.cantidad ? `${p.cantidad} ` : ''}{p.unidadMedida ? p.unidadMedida : p.medida || '-'}
                                                 </span>
                                                 <small style={{ color: '#64748b' }}>{p.medida !== p.unidadMedida ? p.medida : ''}</small>
                                             </div>

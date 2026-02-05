@@ -3,11 +3,17 @@ import { Producto } from '../types/Producto';
 import '../styles/estadisticas.css'; // Reusing styles for now
 
 interface DashboardProps {
-    productos: Producto[];
-    historial: any[];
+    productos?: Producto[];
+    historial?: any[];
+    userProfile?: {
+        id: number;
+        nombre: string;
+        usuario: string;
+        rol: 'supervisor';
+    };
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ productos, historial }) => {
+const Dashboard: React.FC<DashboardProps> = ({ productos = [], historial = [], userProfile }) => {
     const stats = useMemo(() => {
         const totalProductos = productos.length;
         const totalStock = productos.reduce((sum, p) => sum + p.cantidad, 0);
